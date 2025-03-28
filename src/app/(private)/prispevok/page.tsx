@@ -1,12 +1,22 @@
-import { PrismaClient, Post } from "@prisma/client";
+import { Post } from "@prisma/client";
 import Typography from "@mui/material/Typography";
 import Image from "next/image";
 import { Paper, IconButton, Box } from "@mui/material";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import { prisma } from "@/app/api/auth/[...nextauth]/prizma";
 
-// Function to shuffle an array
-function shuffleArray(array: Post[]): Post[] {
+export const metadata = { title: "Zoznam prispevkov | INSTAGRAM" };
+
+// Define a type for the post data including images
+type PostWithImages = Post & {
+  images: {
+    imageUrl: string;
+  }[];
+};
+
+// Function to shuffle an array of PostWithImages
+function shuffleArray(array: PostWithImages[]): PostWithImages[] {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]]; // Swap elements
@@ -14,20 +24,21 @@ function shuffleArray(array: Post[]): Post[] {
   return array;
 }
 
-export const metadata = { title: "Zoznam prispevkov | INSTAGRAM" };
-
 export default async function PostsList() {
   "use server"; // This ensures the code only runs on the server
 
-  const prisma = new PrismaClient(); // Move Prisma inside the function
-  // Explicitly typing the posts result as Post[]
+  // Explicitly typing the posts result as PostWithImages[]
   const posts = await prisma.post.findMany({
     select: {
       id: true,
-      imageUrl: true,
       caption: true,
+      images: {
+        select: {
+          imageUrl: true,
+        },
+      },
     },
-  }) as Post[]; // <-- Adding type assertion here
+  }) as PostWithImages[];
 
   // Shuffle the posts array to randomize the order
   const shuffledPosts = shuffleArray(posts);
@@ -63,17 +74,19 @@ export default async function PostsList() {
               justifyContent: "center",
             }}
           >
-            <Image
-              src={post.imageUrl}
-              alt={post.caption || "Post image"}
-              width={300}
-              height={300}
-              style={{ objectFit: "cover", borderRadius: "8px" }}
-            />
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1, 
-              mt: 1, 
+            {post.images && post.images.length > 0 && (
+              <Image
+                src={post.images[0].imageUrl}
+                alt={post.caption || "Post image"}
+                width={300}
+                height={300}
+                style={{ objectFit: "cover", borderRadius: "8px" }}
+              />
+            )}
+            <Box sx={{
+              display: 'flex',
+              gap: 1,
+              mt: 1,
               alignSelf: 'flex-start',
               width: '100%',
               padding: '0 8px'
