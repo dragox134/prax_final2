@@ -18,19 +18,18 @@ export default function SignUpView() {
   const [showAlert, setShowAlert] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
 
-
   useEffect(() => {
-    setBaseUrl(window.location.origin); // This ensures baseUrl is set only on the client
+    setBaseUrl(window.location.origin);
   }, []);
 
   const handleSignUp = () => {
     if (!gdprChecked) {
-      setShowAlert(true); // Show alert if GDPR is not checked
+      setShowAlert(true);
       return;
     }
 
-    setShowAlert(false); // Hide alert if GDPR is checked
-    signIn("google", {callbackUrl: `${baseUrl}/prispevok`,});
+    setShowAlert(false);
+    signIn("google", { callbackUrl: `${baseUrl}/prispevok` });
   };
 
   return (

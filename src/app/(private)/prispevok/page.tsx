@@ -2,16 +2,21 @@ import { Post } from "@prisma/client";
 import Typography from "@mui/material/Typography";
 import Image from "next/image";
 import { Paper, IconButton, Box } from "@mui/material";
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { prisma } from "@/app/api/auth/[...nextauth]/prizma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import LikeButton from "@/components/LikeButton";
 
 export const metadata = { title: "Zoznam prispevkov | INSTAGRAM" };
 
-// Define a type for the post data including images
+// Define a type for the post data including images and likes
 type PostWithImages = Post & {
   images: {
     imageUrl: string;
+  }[];
+  likes: {
+    userId: string;
   }[];
 };
 
@@ -27,6 +32,11 @@ function shuffleArray(array: PostWithImages[]): PostWithImages[] {
 export default async function PostsList() {
   "use server"; // This ensures the code only runs on the server
 
+  const session = await getServerSession(authOptions);
+  const currentUserId = session?.user?.email ? 
+    (await prisma.user.findUnique({ where: { email: session.user.email } }))?.id : 
+    null;
+
   // Explicitly typing the posts result as PostWithImages[]
   const posts = await prisma.post.findMany({
     select: {
@@ -35,6 +45,11 @@ export default async function PostsList() {
       images: {
         select: {
           imageUrl: true,
+        },
+      },
+      likes: {
+        select: {
+          userId: true,
         },
       },
     },
@@ -50,12 +65,12 @@ export default async function PostsList() {
       </Typography>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          display: "flex",
+          flexDirection: "column",
           gap: "24px",
           marginLeft: "auto",
           marginRight: "auto",
-          maxWidth: "1200px", // Added a max width to ensure the content doesn't stretch too wide
+          maxWidth: "470px", // Instagram-like width
         }}
       >
         {shuffledPosts.map((post) => (
@@ -67,7 +82,7 @@ export default async function PostsList() {
               borderRadius: 2,
               boxShadow: 3,
               transition: "transform 0.3s ease-in-out",
-              "&:hover": { transform: "scale(1.05)", boxShadow: 6 },
+              "&:hover": { transform: "scale(1.02)", boxShadow: 6 },
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -78,8 +93,8 @@ export default async function PostsList() {
               <Image
                 src={post.images[0].imageUrl}
                 alt={post.caption || "Post image"}
-                width={300}
-                height={300}
+                width={470}
+                height={470}
                 style={{ objectFit: "cover", borderRadius: "8px" }}
               />
             )}
@@ -91,9 +106,11 @@ export default async function PostsList() {
               width: '100%',
               padding: '0 8px'
             }}>
-              <IconButton size="small" color="primary">
-                <FavoriteBorderIcon />
-              </IconButton>
+              <LikeButton 
+                postId={post.id}
+                initialLikes={post.likes.length}
+                isLiked={currentUserId ? post.likes.some(like => like.userId === currentUserId) : false}
+              />
               <IconButton size="small" color="primary">
                 <ChatBubbleOutlineIcon />
               </IconButton>
